@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EngStudy 관리자</title>
+<style>
+/* ─── CSS Variables ─────────────────────────────────────── */
+:root {
+  --bg: #F8F9FA;
+  --card: #FFFFFF;
+  --primary: #4ECDC4;
+  --primary-dark: #3DBDB5;
+  --primary-light: #E8F8F5;
+  --danger: #FF6B6B;
+  --danger-dark: #E55A5A;
+  --danger-light: #FDECEA;
+  --success: #00B894;
+  --success-dark: #009E80;
+  --success-light: #D5F5E3;
+  --warning: #F39C12;
+  --text: #2D3436;
+  --text-light: #636E72;
+  --border: #DFE6E9;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 10px;
+  --transition: 0.2s ease;
+}
+
+/* ─── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+button { cursor: pointer; border: none; font-family: inherit; }
+input, select { font-family: inherit; }
+
+/* ─── SVG Icon Sizes ────────────────────────────────────── */
+.icon       { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; }
+.icon svg   { width: 100%; height: 100%; }
+.icon-lg    { width: 28px; height: 28px; }
+.icon-xl    { width: 52px; height: 52px; }
+
+/* ═══════════════════════════════════════════════════════════
+   PIN LOCK SCREEN
+═══════════════════════════════════════════════════════════ */
+#pin-screen {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 20px;
+}
+.pin-card {
+  background: var(--card); border-radius: 16px; box-shadow: var(--shadow-lg);
+  padding: 40px 32px; max-width: 360px; width: 100%; text-align: center;
+}
+.pin-card h1 { font-size: 22px; margin-bottom: 6px; }
+.pin-card p  { font-size: 14px; color: var(--text-light); margin-bottom: 24px; }
+.pin-icon    { margin-bottom: 16px; color: var(--primary); }
+
+.pin-dots { display: flex; justify-content: center; gap: 14px; margin-bottom: 28px; }
+.pin-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border); background: var(--bg); transition: all 0.2s;
+}
+.pin-dot.filled { background: var(--primary); border-color: var(--primary); }
+.pin-dot.error  { background: var(--danger); border-color: var(--danger); animation: shake 0.4s; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)}
+}
+
+.pin-keypad {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; max-width: 280px; margin: 0 auto;
+}
+.pin-key {
+  width: 100%; aspect-ratio: 1.2; font-size: 26px; font-weight: 600; border-radius: 12px;
+  background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.1s; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.pin-key:active { transform: scale(0.92); background: var(--border); }
+.pin-key.empty  { visibility: hidden; }
+.pin-key.back   { font-size: 18px; color: var(--text-light); background: transparent; }
+.pin-key.back:active { background: var(--bg); }
+.pin-error-msg { color: var(--danger); font-size: 14px; margin-top: 16px; min-height: 22px; }
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD LAYOUT
+═══════════════════════════════════════════════════════════ */
+#dashboard { display: none; }
+
+.top-bar {
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.top-bar h1 { font-size: 18px; font-weight: 700; }
+
+.btn-home {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  background: var(--bg); color: var(--text); border-radius: 8px;
+  text-decoration: none; font-size: 14px; font-weight: 500; transition: background 0.15s;
+}
+.btn-home:hover { background: var(--border); }
+
+/* ─── Tabs ──────────────────────────────────────────────── */
+.tab-nav {
+  display: flex; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto;
+}
+.tab-btn {
+  flex: 1; padding: 14px 16px; font-size: 14px; font-weight: 600;
+  background: none; color: var(--text-light); border-bottom: 3px solid transparent;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all var(--transition); white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); background: var(--bg); }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.tab-panel { display: none; padding: 20px; max-width: 960px; margin: 0 auto; }
+.tab-panel.active { display: block; }
+
+/* ─── Card ──────────────────────────────────────────────── */
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+.card-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+/* ─── Stat Boxes ────────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat-box { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; text-align: center; }
+.stat-value { font-size: 32px; font-weight: 800; color: var(--primary); }
+.stat-box.stars .stat-value { color: var(--warning); }
+.stat-label { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+/* ─── Buttons ───────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-danger  { background: var(--danger); color: #fff; }
+.btn-danger:hover  { background: var(--danger-dark); }
+.btn-ghost   { background: none; color: var(--text-light); padding: 8px; border-radius: 6px; }
+.btn-ghost:hover { color: var(--text); background: var(--bg); }
+.btn-sm { padding: 6px 10px; font-size: 13px; }
+.btn-cancel { padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; background: var(--bg); color: var(--text-light); }
+.btn-cancel:hover { background: var(--border); }
+
+/* ─── Forms ─────────────────────────────────────────────── */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 13px; font-weight: 600; color: var(--text-light); }
+.form-input {
+  padding: 12px 14px; border: 2px solid var(--border); border-radius: 8px;
+  font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color var(--transition);
+}
+.form-input:focus { border-color: var(--primary); }
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+/* ─── Filter Chips ──────────────────────────────────────── */
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-chip {
+  padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  background: var(--bg); color: var(--text-light); border: 1px solid var(--border); transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+.filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ─── Table ─────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+th { font-weight: 600; color: var(--text-light); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; background: var(--bg); }
+tr:hover td { background: #f1f8f7; }
+.actions-cell { display: flex; gap: 4px; }
+
+/* ─── Category Grid ─────────────────────────────────────── */
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.cat-card {
+  background: var(--bg); border-radius: var(--radius); padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px; border: 1px solid var(--border);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.cat-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(78,205,196,0.12); }
+.cat-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cat-emoji { font-size: 22px; line-height: 1; }
+.cat-info { flex: 1; min-width: 0; }
+.cat-info h3 { font-size: 15px; font-weight: 600; }
+.cat-info p { font-size: 13px; color: var(--text-light); }
+.cat-id-tag { font-size: 11px; color: var(--text-light); background: var(--border); padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+.cat-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ─── Modal ─────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+}
+.modal-overlay.show { opacity: 1; visibility: visible; }
+.modal {
+  background: var(--card); border-radius: 16px; box-shadow: var(--shadow-lg);
+  padding: 28px; width: 100%; max-width: 440px; transform: translateY(20px); transition: transform 0.2s;
+}
+.modal-overlay.show .modal { transform: translateY(0); }
+.modal h2 { font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+.confirm-text { font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ─── Highlight / Badge ─────────────────────────────────── */
+.row-best td { background: var(--success-light) !important; }
+.row-hard td { background: var(--danger-light) !important; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+.badge-best { background: var(--success-light); color: var(--success-dark); }
+.badge-hard { background: var(--danger-light); color: var(--danger-dark); }
+
+/* ─── Toast ─────────────────────────────────────────────── */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 14px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #fff;
+  box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 8px;
+  animation: toastIn 0.3s, toastOut 0.3s 2.5s forwards;
+}
+.toast.ok  { background: var(--success); }
+.toast.err { background: var(--danger); }
+@keyframes toastIn  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0} }
+
+/* ─── Loading / Empty ───────────────────────────────────── */
+.spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 10px; color: var(--text-light); font-size: 14px; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 15px; }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .tab-btn { padding: 12px 8px; font-size: 13px; }
+  .tab-btn .icon { display: none; }
+  .tab-panel { padding: 14px; }
+  .card { padding: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+
+  /* Card-style table on mobile */
+  .resp thead { display: none; }
+  .resp tbody tr {
+    display: block; padding: 14px; border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 10px; background: var(--card);
+  }
+  .resp tbody td {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: none; font-size: 14px;
+  }
+  .resp tbody td::before {
+    content: attr(data-label); font-weight: 600; color: var(--text-light);
+    font-size: 12px; text-transform: uppercase; min-width: 80px;
+  }
+  .resp tbody td:last-child { justify-content: flex-end; }
+  .resp tbody td:last-child::before { display: none; }
+  .resp tr:hover td { background: none; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-value { font-size: 26px; }
+  .top-bar { padding: 10px 14px; }
+  .top-bar h1 { font-size: 16px; }
+  .btn-home { padding: 6px 12px; font-size: 13px; }
+  .pin-card { padding: 28px 20px; }
+  .pin-keypad { max-width: 240px; gap: 10px; }
+  .pin-key { font-size: 22px; }
+  .toast-wrap { bottom: 12px; right: 12px; left: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     PIN LOCK SCREEN
+═══════════════════════════════════════════════════════════ -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <div class="pin-icon icon-xl">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <h1>관리자 잠금</h1>
+    <p>4자리 PIN을 입력하세요</p>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+
+    <div class="pin-keypad" id="pin-keypad">
+      <button class="pin-key" data-n="1">1</button>
+      <button class="pin-key" data-n="2">2</button>
+      <button class="pin-key" data-n="3">3</button>
+      <button class="pin-key" data-n="4">4</button>
+      <button class="pin-key" data-n="5">5</button>
+      <button class="pin-key" data-n="6">6</button>
+      <button class="pin-key" data-n="7">7</button>
+      <button class="pin-key" data-n="8">8</button>
+      <button class="pin-key" data-n="9">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" data-n="0">0</button>
+      <button class="pin-key back" data-action="back" aria-label="지우기">
+        <span class="icon icon-lg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+            <line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <div class="pin-error-msg" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     DASHBOARD
+═══════════════════════════════════════════════════════════ -->
+<div id="dashboard">
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <h1>EngStudy 관리자</h1>
+    <a href="index.html" class="btn-home">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </span>
+      홈으로
+    </a>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="words">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+      단어 관리
+    </button>
+    <button class="tab-btn" data-tab="stats">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      학습 통계
+    </button>
+    <button class="tab-btn" data-tab="categories">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      카테고리
+    </button>
+  </nav>
+
+  <!-- ═══ Tab: 단어 관리 ═══ -->
+  <section class="tab-panel active" id="panel-words">
+    <!-- Add Word Form -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+          새 단어 추가
+        </span>
+      </div>
+      <form id="form-add">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="add-eng">영어</label>
+            <input type="text" id="add-eng" class="form-input" placeholder="예: apple" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="add-kor">한글</label>
+            <input type="text" id="add-kor" class="form-input" placeholder="예: 사과" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="add-cat">카테고리</label>
+            <select id="add-cat" class="form-input" required><option value="">선택하세요</option></select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            추가
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Word List -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+          단어 목록
+          <span id="word-count" style="font-size:13px;font-weight:400;color:var(--text-light)"></span>
+        </span>
+        <div class="filter-bar" id="filter-bar"></div>
+      </div>
+      <div id="words-loading" class="loading"><span class="spinner"></span> 로딩 중...</div>
+      <div class="table-wrap" id="words-table" style="display:none">
+        <table class="resp">
+          <thead><tr><th>영어</th><th>한글</th><th>카테고리</th><th style="width:100px">액션</th></tr></thead>
+          <tbody id="words-tbody"></tbody>
+        </table>
+      </div>
+      <div id="words-empty" class="empty-state" style="display:none">등록된 단어가 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ═══ Tab: 학습 통계 ═══ -->
+  <section class="tab-panel" id="panel-stats">
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="s-games">-</div>
+        <div class="stat-label">총 게임 수</div>
+      </div>
+      <div class="stat-box stars">
+        <div class="stat-value" id="s-stars">-</div>
+        <div class="stat-label">총 별 개수</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          단어별 통계
+        </span>
+      </div>
+      <div id="stats-loading" class="loading"><span class="spinner"></span> 로딩 중...</div>
+      <div class="table-wrap" id="stats-table" style="display:none">
+        <table class="resp">
+          <thead><tr><th>단어</th><th>시도 횟수</th><th>총 별</th><th>최고 별</th></tr></thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
+      <div id="stats-empty" class="empty-state" style="display:none">아직 학습 기록이 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- ═══ Tab: 카테고리 ═══ -->
+  <section class="tab-panel" id="panel-categories">
+    <!-- Add Category Form -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+          새 카테고리 추가
+        </span>
+      </div>
+      <form id="form-add-cat">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="addcat-id">ID (영어)</label>
+            <input type="text" id="addcat-id" class="form-input" placeholder="animals" required autocomplete="off" pattern="[a-z0-9_-]+" title="영어 소문자, 숫자, -, _ 만 사용 가능">
+          </div>
+          <div class="form-group">
+            <label for="addcat-name">이름 (한글)</label>
+            <input type="text" id="addcat-name" class="form-input" placeholder="동물" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="addcat-emoji">이모지 (선택)</label>
+            <input type="text" id="addcat-emoji" class="form-input" placeholder="🐾" autocomplete="off" maxlength="4">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            추가
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Category List -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+          카테고리 목록
+          <span id="cat-count" style="font-size:13px;font-weight:400;color:var(--text-light)"></span>
+        </span>
+      </div>
+      <div id="cats-loading" class="loading"><span class="spinner"></span> 로딩 중...</div>
+      <div class="cat-grid" id="cat-grid" style="display:none"></div>
+      <div id="cats-empty" class="empty-state" style="display:none">카테고리가 없습니다.</div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     EDIT MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <h2>
+      <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+      단어 수정
+    </h2>
+    <form id="form-edit">
+      <input type="hidden" id="edit-id">
+      <div class="form-group" style="margin-bottom:12px">
+        <label for="edit-eng">영어</label>
+        <input type="text" id="edit-eng" class="form-input" required>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label for="edit-kor">한글</label>
+        <input type="text" id="edit-kor" class="form-input" required>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label for="edit-cat">카테고리</label>
+        <select id="edit-cat" class="form-input" required><option value="">선택하세요</option></select>
+      </div>
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-edit')">취소</button>
+        <button type="submit" class="btn btn-primary">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     DELETE CONFIRM MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-del">
+  <div class="modal">
+    <h2>
+      <span class="icon" style="color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
+      단어 삭제
+    </h2>
+    <p class="confirm-text" id="del-msg">이 단어를 삭제하시겠습니까?</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-del')">취소</button>
+      <button class="btn btn-danger" id="del-ok">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CATEGORY EDIT MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-cat-edit">
+  <div class="modal">
+    <h2>
+      <span class="icon" style="color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+      카테고리 수정
+    </h2>
+    <form id="form-cat-edit">
+      <input type="hidden" id="catEdit-id">
+      <div class="form-group" style="margin-bottom:12px">
+        <label>ID</label>
+        <input type="text" id="catEdit-idDisplay" class="form-input" disabled style="background:#eee;color:var(--text-light)">
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label for="catEdit-name">이름 (한글)</label>
+        <input type="text" id="catEdit-name" class="form-input" required>
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label for="catEdit-emoji">이모지</label>
+        <input type="text" id="catEdit-emoji" class="form-input" maxlength="4">
+      </div>
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" onclick="closeModal('modal-cat-edit')">취소</button>
+        <button type="submit" class="btn btn-primary">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CATEGORY DELETE CONFIRM MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-cat-del">
+  <div class="modal">
+    <h2>
+      <span class="icon" style="color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
+      카테고리 삭제
+    </h2>
+    <p class="confirm-text" id="catDel-msg">이 카테고리를 삭제하시겠습니까?</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-cat-del')">취소</button>
+      <button class="btn btn-danger" id="catDel-ok">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
+
+  /* ─── DEFAULT DATA (서버 src/server.js 와 동일) ───── */
+  var DEFAULT_DATA = {
+    words: [
+      { id: 'w001', english: 'cat', korean: '고양이', emoji: '🐱', category: 'animals' },
+      { id: 'w002', english: 'dog', korean: '강아지', emoji: '🐶', category: 'animals' },
+      { id: 'w003', english: 'bird', korean: '새', emoji: '🐦', category: 'animals' },
+      { id: 'w004', english: 'fish', korean: '물고기', emoji: '🐟', category: 'animals' },
+      { id: 'w005', english: 'rabbit', korean: '토끼', emoji: '🐰', category: 'animals' },
+      { id: 'w006', english: 'bear', korean: '곰', emoji: '🐻', category: 'animals' },
+      { id: 'w007', english: 'lion', korean: '사자', emoji: '🦁', category: 'animals' },
+      { id: 'w008', english: 'elephant', korean: '코끼리', emoji: '🐘', category: 'animals' },
+      { id: 'w009', english: 'monkey', korean: '원숭이', emoji: '🐵', category: 'animals' },
+      { id: 'w010', english: 'pig', korean: '돼지', emoji: '🐷', category: 'animals' },
+      { id: 'w011', english: 'apple', korean: '사과', emoji: '🍎', category: 'fruits' },
+      { id: 'w012', english: 'banana', korean: '바나나', emoji: '🍌', category: 'fruits' },
+      { id: 'w013', english: 'grape', korean: '포도', emoji: '🍇', category: 'fruits' },
+      { id: 'w014', english: 'orange', korean: '오렌지', emoji: '🍊', category: 'fruits' },
+      { id: 'w015', english: 'strawberry', korean: '딸기', emoji: '🍓', category: 'fruits' },
+      { id: 'w016', english: 'watermelon', korean: '수박', emoji: '🍉', category: 'fruits' },
+      { id: 'w017', english: 'peach', korean: '복숭아', emoji: '🍑', category: 'fruits' },
+      { id: 'w018', english: 'lemon', korean: '레몬', emoji: '🍋', category: 'fruits' },
+      { id: 'w019', english: 'red', korean: '빨간색', emoji: '🔴', category: 'colors' },
+      { id: 'w020', english: 'blue', korean: '파란색', emoji: '🔵', category: 'colors' },
+      { id: 'w021', english: 'yellow', korean: '노란색', emoji: '🟡', category: 'colors' },
+      { id: 'w022', english: 'green', korean: '초록색', emoji: '🟢', category: 'colors' },
+      { id: 'w023', english: 'white', korean: '하얀색', emoji: '⚪', category: 'colors' },
+      { id: 'w024', english: 'black', korean: '검정색', emoji: '⚫', category: 'colors' },
+      { id: 'w025', english: 'pink', korean: '분홍색', emoji: '🩷', category: 'colors' },
+      { id: 'w026', english: 'purple', korean: '보라색', emoji: '🟣', category: 'colors' },
+      { id: 'w027', english: 'one', korean: '하나', emoji: '1️⃣', category: 'numbers' },
+      { id: 'w028', english: 'two', korean: '둘', emoji: '2️⃣', category: 'numbers' },
+      { id: 'w029', english: 'three', korean: '셋', emoji: '3️⃣', category: 'numbers' },
+      { id: 'w030', english: 'four', korean: '넷', emoji: '4️⃣', category: 'numbers' },
+      { id: 'w031', english: 'five', korean: '다섯', emoji: '5️⃣', category: 'numbers' },
+      { id: 'w032', english: 'six', korean: '여섯', emoji: '6️⃣', category: 'numbers' },
+      { id: 'w033', english: 'seven', korean: '일곱', emoji: '7️⃣', category: 'numbers' },
+      { id: 'w034', english: 'eight', korean: '여덟', emoji: '8️⃣', category: 'numbers' },
+      { id: 'w035', english: 'head', korean: '머리', emoji: '👤', category: 'body' },
+      { id: 'w036', english: 'hand', korean: '손', emoji: '✋', category: 'body' },
+      { id: 'w037', english: 'foot', korean: '발', emoji: '🦶', category: 'body' },
+      { id: 'w038', english: 'eye', korean: '눈', emoji: '👁️', category: 'body' },
+      { id: 'w039', english: 'nose', korean: '코', emoji: '👃', category: 'body' },
+      { id: 'w040', english: 'mouth', korean: '입', emoji: '👄', category: 'body' },
+      { id: 'w041', english: 'ear', korean: '귀', emoji: '👂', category: 'body' },
+      { id: 'w042', english: 'arm', korean: '팔', emoji: '💪', category: 'body' },
+      { id: 'w043', english: 'milk', korean: '우유', emoji: '🥛', category: 'food' },
+      { id: 'w044', english: 'bread', korean: '빵', emoji: '🍞', category: 'food' },
+      { id: 'w045', english: 'rice', korean: '밥', emoji: '🍚', category: 'food' },
+      { id: 'w046', english: 'egg', korean: '달걀', emoji: '🥚', category: 'food' },
+      { id: 'w047', english: 'water', korean: '물', emoji: '💧', category: 'food' },
+      { id: 'w048', english: 'cake', korean: '케이크', emoji: '🎂', category: 'food' },
+      { id: 'w049', english: 'pizza', korean: '피자', emoji: '🍕', category: 'food' },
+      { id: 'w050', english: 'chicken', korean: '치킨', emoji: '🍗', category: 'food' },
+    ],
+    categories: [
+      { id: 'animals', name: '동물', emoji: '🐾' },
+      { id: 'fruits', name: '과일', emoji: '🍎' },
+      { id: 'colors', name: '색깔', emoji: '🎨' },
+      { id: 'numbers', name: '숫자', emoji: '🔢' },
+      { id: 'body', name: '신체', emoji: '🦶' },
+      { id: 'food', name: '음식', emoji: '🍔' },
+    ],
+    stats: {
+      totalGames: 0,
+      totalStars: 0,
+      wordStats: {},
+    },
+    settings: {
+      adminPin: '1234',
+    },
+  };
+
+  /* ─── localStorage 래퍼 ─────────────────────────────── */
+  var STORAGE_KEY = 'engstudy_data';
+
+  function loadData() {
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.error('데이터 로드 실패:', e);
+    }
+    var data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    saveData(data);
+    return data;
+  }
+
+  function saveData(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error('데이터 저장 실패:', e);
+    }
+  }
+
+  function generateId(prefix) {
+    return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+  }
+
+  /* ─── Helpers ───────────────────────────────────────── */
+  var $ = function (s) { return document.getElementById(s); };
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* ─── Toast ─────────────────────────────────────────── */
+  var svgCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var svgX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+
+  function toast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type === 'error' ? 'err' : 'ok');
+    el.innerHTML = '<span class="icon">' + (type === 'error' ? svgX : svgCheck) + '</span>' + esc(msg);
+    $('toast-wrap').appendChild(el);
+    setTimeout(function () { el.remove(); }, 3000);
+  }
+
+  /* ─── State ─────────────────────────────────────────── */
+  var words = [];
+  var categories = [];
+  var filter = '';
+  var delId = null;
+
+  function catName(id) {
+    for (var i = 0; i < categories.length; i++) {
+      if (categories[i].id === id) return categories[i].name;
+    }
+    return id;
+  }
+
+  /* ─── Modal ─────────────────────────────────────────── */
+  window.openModal = function (id) { $(id).classList.add('show'); };
+  window.closeModal = function (id) { $(id).classList.remove('show'); };
+
+  document.querySelectorAll('.modal-overlay').forEach(function (ov) {
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('show'); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.show').forEach(function (m) { m.classList.remove('show'); });
+  });
+
+  /* ═════════════════════════════════════════════════════
+     PIN SCREEN
+  ═════════════════════════════════════════════════════ */
+  (function () {
+    var pin = '';
+    var dots = document.querySelectorAll('#pin-dots .pin-dot');
+    var errEl = $('pin-error');
+    var locked = false;
+
+    function updDots() {
+      dots.forEach(function (d, i) {
+        d.classList.toggle('filled', i < pin.length);
+        d.classList.remove('error');
+      });
+    }
+
+    function setErr(msg) {
+      errEl.textContent = msg;
+      dots.forEach(function (d) { d.classList.add('error'); d.classList.remove('filled'); });
+      pin = '';
+      locked = true;
+      setTimeout(function () { locked = false; updDots(); errEl.textContent = ''; }, 1000);
+    }
+
+    function submit() {
+      if (pin.length !== 4) return;
+      locked = true;
+      var data = loadData();
+      var correctPin = data.settings && data.settings.adminPin ? data.settings.adminPin : '1234';
+      if (pin === correctPin) {
+        $('pin-screen').style.display = 'none';
+        $('dashboard').style.display = 'block';
+        loadAll();
+      } else {
+        setErr('PIN이 올바르지 않습니다');
+      }
+      locked = false;
+    }
+
+    $('pin-keypad').addEventListener('click', function (e) {
+      if (locked) return;
+      var btn = e.target.closest('.pin-key');
+      if (!btn) return;
+      if (btn.dataset.action === 'back') { pin = pin.slice(0, -1); updDots(); return; }
+      if (btn.dataset.n !== undefined && pin.length < 4) { pin += btn.dataset.n; updDots(); if (pin.length === 4) submit(); }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if ($('pin-screen').style.display === 'none') return;
+      if (locked) return;
+      if (e.key >= '0' && e.key <= '9' && pin.length < 4) { pin += e.key; updDots(); if (pin.length === 4) submit(); }
+      else if (e.key === 'Backspace') { pin = pin.slice(0, -1); updDots(); }
+    });
+  })();
+
+  /* ═════════════════════════════════════════════════════
+     TAB NAVIGATION
+  ═════════════════════════════════════════════════════ */
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      $('panel-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'stats') loadStats();
+      if (btn.dataset.tab === 'categories') loadCats();
+    });
+  });
+
+  /* ═════════════════════════════════════════════════════
+     LOAD ALL
+  ═════════════════════════════════════════════════════ */
+  function loadAll() {
+    loadWords();
+    loadStats();
+    loadCats();
+  }
+
+  /* ═════════════════════════════════════════════════════
+     WORDS
+  ═════════════════════════════════════════════════════ */
+  function populateSelects() {
+    [$('add-cat'), $('edit-cat')].forEach(function (sel) {
+      var val = sel.value;
+      sel.innerHTML = '<option value="">선택하세요</option>';
+      categories.forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = c.name;
+        sel.appendChild(o);
+      });
+      sel.value = val;
+    });
+  }
+
+  function renderFilters() {
+    var bar = $('filter-bar');
+    bar.innerHTML = '';
+    var all = document.createElement('button');
+    all.className = 'filter-chip' + (filter === '' ? ' active' : '');
+    all.textContent = '전체';
+    all.onclick = function () { filter = ''; renderFilters(); renderWords(); };
+    bar.appendChild(all);
+    categories.forEach(function (c) {
+      var b = document.createElement('button');
+      b.className = 'filter-chip' + (filter === c.id ? ' active' : '');
+      b.textContent = c.name;
+      b.onclick = function () { filter = c.id; renderFilters(); renderWords(); };
+      bar.appendChild(b);
+    });
+  }
+
+  // SVG templates for action buttons
+  var svgEdit = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  var svgTrash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
+  function renderWords() {
+    var tbody = $('words-tbody');
+    var tbl = $('words-table');
+    var emp = $('words-empty');
+    var list = filter ? words.filter(function (w) { return w.category === filter; }) : words;
+
+    $('word-count').textContent = '(' + list.length + '개)';
+
+    if (list.length === 0) { tbl.style.display = 'none'; emp.style.display = 'block'; return; }
+    tbl.style.display = 'block'; emp.style.display = 'none';
+
+    tbody.innerHTML = list.map(function (w) {
+      return '<tr>' +
+        '<td data-label="영어"><strong>' + esc(w.english) + '</strong></td>' +
+        '<td data-label="한글">' + esc(w.korean) + '</td>' +
+        '<td data-label="카테고리">' + esc(catName(w.category)) + '</td>' +
+        '<td data-label="">' +
+          '<div class="actions-cell">' +
+            '<button class="btn btn-ghost btn-sm" data-edit="' + w.id + '" title="수정" aria-label="수정"><span class="icon">' + svgEdit + '</span></button>' +
+            '<button class="btn btn-ghost btn-sm" data-del="' + w.id + '" title="삭제" aria-label="삭제" style="color:var(--danger)"><span class="icon">' + svgTrash + '</span></button>' +
+          '</div>' +
+        '</td></tr>';
+    }).join('');
+  }
+
+  function loadWords() {
+    $('words-loading').style.display = 'flex';
+    $('words-table').style.display = 'none';
+    $('words-empty').style.display = 'none';
+
+    var data = loadData();
+    words = data.words || [];
+    categories = data.categories || [];
+    populateSelects();
+    renderFilters();
+    renderWords();
+    $('words-loading').style.display = 'none';
+  }
+
+  // Delegate clicks for edit / delete buttons
+  $('words-tbody').addEventListener('click', function (e) {
+    var editBtn = e.target.closest('[data-edit]');
+    var delBtn = e.target.closest('[data-del]');
+    if (editBtn) openEdit(editBtn.dataset.edit);
+    if (delBtn) openDel(delBtn.dataset.del);
+  });
+
+  // Add word
+  $('form-add').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var eng = $('add-eng').value.trim();
+    var kor = $('add-kor').value.trim();
+    var cat = $('add-cat').value;
+    if (!eng || !kor || !cat) return;
+
+    var data = loadData();
+    var newWord = {
+      id: generateId('w'),
+      english: eng,
+      korean: kor,
+      emoji: ' ',
+      category: cat
+    };
+    data.words.push(newWord);
+    saveData(data);
+    toast('"' + eng + '" 단어가 추가되었습니다');
+    $('form-add').reset();
+    loadWords();
+  });
+
+  // Edit word
+  function openEdit(id) {
+    var w = words.find(function (x) { return x.id === id; });
+    if (!w) return;
+    $('edit-id').value = w.id;
+    $('edit-eng').value = w.english;
+    $('edit-kor').value = w.korean;
+    $('edit-cat').value = w.category;
+    openModal('modal-edit');
+  }
+
+  $('form-edit').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = $('edit-id').value;
+    var eng = $('edit-eng').value.trim();
+    var kor = $('edit-kor').value.trim();
+    var cat = $('edit-cat').value;
+    if (!eng || !kor || !cat) return;
+
+    var data = loadData();
+    var found = false;
+    for (var i = 0; i < data.words.length; i++) {
+      if (data.words[i].id === id) {
+        data.words[i].english = eng;
+        data.words[i].korean = kor;
+        data.words[i].category = cat;
+        found = true;
+        break;
+      }
+    }
+    if (!found) { toast('단어를 찾을 수 없습니다', 'error'); return; }
+    saveData(data);
+    toast('"' + eng + '" 단어가 수정되었습니다');
+    closeModal('modal-edit');
+    loadWords();
+  });
+
+  // Delete word
+  function openDel(id) {
+    var w = words.find(function (x) { return x.id === id; });
+    if (!w) return;
+    delId = id;
+    $('del-msg').textContent = '"' + w.english + ' (' + w.korean + ')" 단어를 삭제하시겠습니까?';
+    openModal('modal-del');
+  }
+
+  $('del-ok').addEventListener('click', function () {
+    if (!delId) return;
+    var data = loadData();
+    data.words = data.words.filter(function (w) { return w.id !== delId; });
+    saveData(data);
+    toast('단어가 삭제되었습니다');
+    closeModal('modal-del');
+    delId = null;
+    loadWords();
+  });
+
+  /* ═════════════════════════════════════════════════════
+     STATS
+  ═════════════════════════════════════════════════════ */
+  function loadStats() {
+    $('stats-loading').style.display = 'flex';
+    $('stats-table').style.display = 'none';
+    $('stats-empty').style.display = 'none';
+
+    var data = loadData();
+    var s = data.stats || { totalGames: 0, totalStars: 0, wordStats: {} };
+
+    $('s-games').textContent = s.totalGames || 0;
+    $('s-stars').textContent = s.totalStars || 0;
+
+    var ws = s.wordStats || {};
+    var entries = Object.keys(ws).map(function (k) { return { id: k, data: ws[k] }; });
+
+    if (entries.length === 0) {
+      $('stats-empty').style.display = 'block';
+      $('stats-loading').style.display = 'none';
+      return;
+    }
+
+    // Find best & hardest
+    var bestId = null, hardId = null, bestAvg = -1, hardAvg = Infinity;
+    entries.forEach(function (e) {
+      if (e.data.attempts > 0) {
+        var avg = e.data.totalStars / e.data.attempts;
+        if (avg > bestAvg) { bestAvg = avg; bestId = e.id; }
+        if (avg < hardAvg) { hardAvg = avg; hardId = e.id; }
+      }
+    });
+
+    // SVG star icon for display
+    var svgStar = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+
+    $('stats-tbody').innerHTML = entries.map(function (e) {
+      var w = words.find(function (x) { return x.id === e.id; });
+      var label = w ? w.english + ' (' + w.korean + ')' : e.id;
+      var isBest = e.id === bestId;
+      var isHard = e.id === hardId && hardId !== bestId;
+      var cls = isBest ? 'row-best' : (isHard ? 'row-hard' : '');
+      var badge = isBest ? '<span class="badge badge-best">BEST</span>' : (isHard ? '<span class="badge badge-hard">HARD</span>' : '');
+
+      return '<tr class="' + cls + '">' +
+        '<td data-label="단어">' + esc(label) + badge + '</td>' +
+        '<td data-label="시도">' + e.data.attempts + '</td>' +
+        '<td data-label="총 별"><span style="color:var(--warning);vertical-align:middle">' + svgStar + '</span> ' + e.data.totalStars + '</td>' +
+        '<td data-label="최고 별"><span style="color:var(--warning);vertical-align:middle">' + svgStar + '</span> ' + e.data.bestStars + '</td>' +
+        '</tr>';
+    }).join('');
+
+    $('stats-table').style.display = 'block';
+    $('stats-loading').style.display = 'none';
+  }
+
+  /* ═════════════════════════════════════════════════════
+     CATEGORIES
+  ═════════════════════════════════════════════════════ */
+  // Category SVG icons by id
+  var catIcons = {
+    animals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a4 4 0 0 0-4 4v1a3 3 0 0 0 3 3h1a2 2 0 0 0 4 0h4a2 2 0 0 0 4 0h1a3 3 0 0 0 3-3v-1a4 4 0 0 0-4-4h-2V6a4 4 0 0 0-4-4z"/></svg>',
+    fruits: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="7"/><path d="M12 7V3"/><path d="M15 4c-1 1-3 1-3 3"/></svg>',
+    colors: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="4.5"/><circle cx="17.5" cy="14.5" r="4.5"/><circle cx="8.5" cy="14.5" r="4.5"/></svg>',
+    numbers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-12"/><path d="M14 17l6-12"/><path d="M3 10h18"/><path d="M3 14h18"/></svg>',
+    body: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M8 12h8"/><path d="M9 22l3-6 3 6"/></svg>',
+    food: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>'
+  };
+  var defaultCatIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>';
+
+  var catDelId = null;
+
+  function loadCats() {
+    $('cats-loading').style.display = 'flex';
+    $('cat-grid').style.display = 'none';
+    $('cats-empty').style.display = 'none';
+
+    var data = loadData();
+    var cats = data.categories || [];
+    $('cat-count').textContent = '(' + cats.length + '개)';
+
+    if (cats.length === 0) {
+      $('cats-empty').style.display = 'block';
+      $('cats-loading').style.display = 'none';
+      return;
+    }
+
+    // Count words per category
+    var counts = {};
+    words.forEach(function (w) { counts[w.category] = (counts[w.category] || 0) + 1; });
+
+    $('cat-grid').innerHTML = cats.map(function (c) {
+      var emojiHtml = c.emoji ? '<span class="cat-emoji">' + esc(c.emoji) + '</span>' : '<span class="icon-lg">' + (catIcons[c.id] || defaultCatIcon) + '</span>';
+      return '<div class="cat-card">' +
+        '<div class="cat-icon">' + emojiHtml + '</div>' +
+        '<div class="cat-info">' +
+          '<h3>' + esc(c.name) + '</h3>' +
+          '<p><span class="cat-id-tag">' + esc(c.id) + '</span> · ' + (counts[c.id] || 0) + '개 단어</p>' +
+        '</div>' +
+        '<div class="cat-actions">' +
+          '<button class="btn btn-ghost btn-sm" data-cat-edit="' + esc(c.id) + '" title="수정" aria-label="수정"><span class="icon">' + svgEdit + '</span></button>' +
+          '<button class="btn btn-ghost btn-sm" data-cat-del="' + esc(c.id) + '" title="삭제" aria-label="삭제" style="color:var(--danger)"><span class="icon">' + svgTrash + '</span></button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    $('cat-grid').style.display = 'grid';
+    $('cats-loading').style.display = 'none';
+  }
+
+  // Delegate clicks for category edit / delete buttons
+  $('cat-grid').addEventListener('click', function (e) {
+    var editBtn = e.target.closest('[data-cat-edit]');
+    var delBtn = e.target.closest('[data-cat-del]');
+    if (editBtn) openCatEdit(editBtn.dataset.catEdit);
+    if (delBtn) openCatDel(delBtn.dataset.catDel);
+  });
+
+  // Add category
+  $('form-add-cat').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = $('addcat-id').value.trim().toLowerCase();
+    var name = $('addcat-name').value.trim();
+    var emoji = $('addcat-emoji').value.trim();
+    if (!id || !name) return;
+
+    // Validate id format
+    if (!/^[a-z0-9_-]+$/.test(id)) {
+      toast('ID는 영어 소문자, 숫자, -, _ 만 사용 가능합니다', 'error');
+      return;
+    }
+
+    var data = loadData();
+    // Check for duplicate id
+    for (var i = 0; i < data.categories.length; i++) {
+      if (data.categories[i].id === id) {
+        toast('이미 존재하는 카테고리 ID입니다', 'error');
+        return;
+      }
+    }
+
+    var newCat = { id: id, name: name };
+    if (emoji) newCat.emoji = emoji;
+    data.categories.push(newCat);
+    saveData(data);
+
+    toast('"' + name + '" 카테고리가 추가되었습니다');
+    $('form-add-cat').reset();
+    loadCats();
+    loadWords();
+  });
+
+  // Edit category
+  function openCatEdit(id) {
+    var data = loadData();
+    var cats = data.categories || [];
+    var cat = null;
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i].id === id) { cat = cats[i]; break; }
+    }
+    if (!cat) { toast('카테고리를 찾을 수 없습니다', 'error'); return; }
+    $('catEdit-id').value = cat.id;
+    $('catEdit-idDisplay').value = cat.id;
+    $('catEdit-name').value = cat.name;
+    $('catEdit-emoji').value = cat.emoji || '';
+    openModal('modal-cat-edit');
+  }
+
+  $('form-cat-edit').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = $('catEdit-id').value;
+    var name = $('catEdit-name').value.trim();
+    var emoji = $('catEdit-emoji').value.trim();
+    if (!name) return;
+
+    var data = loadData();
+    var found = false;
+    for (var i = 0; i < data.categories.length; i++) {
+      if (data.categories[i].id === id) {
+        data.categories[i].name = name;
+        data.categories[i].emoji = emoji || '';
+        found = true;
+        break;
+      }
+    }
+    if (!found) { toast('카테고리를 찾을 수 없습니다', 'error'); return; }
+    saveData(data);
+    toast('"' + name + '" 카테고리가 수정되었습니다');
+    closeModal('modal-cat-edit');
+    loadCats();
+    loadWords();
+  });
+
+  // Delete category
+  function openCatDel(id) {
+    var cat = null;
+    for (var i = 0; i < categories.length; i++) {
+      if (categories[i].id === id) { cat = categories[i]; break; }
+    }
+    catDelId = id;
+    var label = cat ? cat.name + ' (' + id + ')' : id;
+    $('catDel-msg').textContent = '"' + label + '" 카테고리를 삭제하시겠습니까?';
+    openModal('modal-cat-del');
+  }
+
+  $('catDel-ok').addEventListener('click', function () {
+    if (!catDelId) return;
+    var data = loadData();
+
+    // Check if any words use this category
+    var hasWords = false;
+    for (var i = 0; i < data.words.length; i++) {
+      if (data.words[i].category === catDelId) { hasWords = true; break; }
+    }
+    if (hasWords) {
+      toast('이 카테고리에 단어가 있어서 삭제할 수 없습니다. 먼저 단어를 삭제하거나 다른 카테고리로 옮기세요.', 'error');
+      closeModal('modal-cat-del');
+      return;
+    }
+
+    data.categories = data.categories.filter(function (c) { return c.id !== catDelId; });
+    saveData(data);
+    toast('카테고리가 삭제되었습니다');
+    closeModal('modal-cat-del');
+    catDelId = null;
+    loadCats();
+    loadWords();
+  });
+
+})();
+</script>
+</body>
+</html>

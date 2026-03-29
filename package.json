@@ -1,0 +1,26 @@
+{
+  "name": "engstudy",
+  "version": "1.0.0",
+  "description": "초등 1학년 영어 단어 듣기 게임",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "npx serve public -l 3000",
+    "server": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "english",
+    "education",
+    "kids",
+    "game"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "selfsigned": "^5.5.0"
+  }
+}

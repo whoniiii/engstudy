@@ -1,0 +1,7 @@
+node_modules/
+data/words.json
+certs/
+.DS_Store
+*.log
+.github/skills/
+.github/agents.7z
