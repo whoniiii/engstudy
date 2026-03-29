@@ -717,7 +717,28 @@ tr:hover td { background: #f1f8f7; }
   function loadData() {
     try {
       var stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        var data = JSON.parse(stored);
+        var changed = false;
+        var existingCatIds = {};
+        data.categories.forEach(function(c) { existingCatIds[c.id] = true; });
+        DEFAULT_DATA.categories.forEach(function(c) {
+          if (!existingCatIds[c.id]) {
+            data.categories.push(JSON.parse(JSON.stringify(c)));
+            changed = true;
+          }
+        });
+        var existingWordIds = {};
+        data.words.forEach(function(w) { existingWordIds[w.id] = true; });
+        DEFAULT_DATA.words.forEach(function(w) {
+          if (!existingWordIds[w.id]) {
+            data.words.push(JSON.parse(JSON.stringify(w)));
+            changed = true;
+          }
+        });
+        if (changed) saveData(data);
+        return data;
+      }
     } catch (e) {
       console.error('데이터 로드 실패:', e);
     }

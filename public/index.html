@@ -897,7 +897,27 @@ const STORAGE_KEY = 'engstudy_data';
 function loadData() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const data = JSON.parse(stored);
+      // 자동 병합: DEFAULT_DATA에 있는 새 카테고리/단어를 기존 데이터에 추가
+      let changed = false;
+      const existingCatIds = new Set(data.categories.map(c => c.id));
+      DEFAULT_DATA.categories.forEach(c => {
+        if (!existingCatIds.has(c.id)) {
+          data.categories.push(JSON.parse(JSON.stringify(c)));
+          changed = true;
+        }
+      });
+      const existingWordIds = new Set(data.words.map(w => w.id));
+      DEFAULT_DATA.words.forEach(w => {
+        if (!existingWordIds.has(w.id)) {
+          data.words.push(JSON.parse(JSON.stringify(w)));
+          changed = true;
+        }
+      });
+      if (changed) saveData(data);
+      return data;
+    }
   } catch (e) {
     console.error('데이터 로드 실패, 초기화합니다:', e);
   }
